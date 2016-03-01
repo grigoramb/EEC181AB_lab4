@@ -30,7 +30,7 @@ D = zeros(height,width);
 for i = rows
     for j = cols
         block = Org(i-1:i+1,j-1:j+1);
-        D(i,j) = (abs(sum(sum(Gx.*block))) + abs(sum(sum(Gy.*block))))/2;
+        D(i,j) = (abs(sum(sum(Gx.*block))) + abs(sum(sum(Gy.*block)))) / 8;
     end
 end
 
