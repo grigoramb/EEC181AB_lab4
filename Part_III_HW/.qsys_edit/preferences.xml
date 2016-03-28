@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<preferences>
+ <debug showDebugMenu="0" />
+ <systemtable
+   filter="lab4.clk_65 OR lab4.sdram_clk OR lab4.system_ref_clk OR pll_0.outclk0 OR sys_sdram_pll_0.sys_clk"
+   showClockDomains="0"
+   showResetDomains="1">
+  <columns>
+   <connections preferredWidth="239" />
+   <irq preferredWidth="47" />
+  </columns>
+ </systemtable>
+ <library
+   expandedCategories="Library/University Program,Library/Processors and Peripherals/Hard Processor Systems,Library/University Program/Clock,Project,Library/Basic Functions/Simulation; Debug and Verification,Library,Library/Basic Functions,Library/Basic Functions/Simulation; Debug and Verification/Debug and Performance,Library/Processors and Peripherals" />
+ <window width="1874" height="1096" x="54" y="-8" />
+ <hdlexample language="VERILOG" />
+ <generation simulation="NONE" />
+</preferences>

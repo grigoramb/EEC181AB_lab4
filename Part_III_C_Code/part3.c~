@@ -1,0 +1,302 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <time.h>
+#include <ctype.h>
+
+#define HW_REGS_BASE		0xfc000000
+#define HW_REGS_SPAN		0x04000000
+#define HW_REGS_MASK		HW_REGS_SPAN-1
+#define ALT_LWFPGASLVS_OFST	0xff200000
+
+#define SDRAM_BASE		0xc0000000
+#define SDRAM_SPAN		0x40000000
+#define SDRAM_OFST		0xC0000000
+#define SDRAM_MASK		SDRAM_SPAN-1
+int main(int argc, char * argv[]){
+   
+  FILE * input  = fopen("greyscale.txt","r");
+  FILE * output = fopen("output.txt","w");
+  if(input == NULL || output == NULL){
+    printf("file error");
+    return 1;
+  }
+
+  void *VA, *LW;
+  int fd;
+  
+  void *sw_ptr, *led_ptr;
+  void *done_light, *ready_button, *cont_button, *state;
+  //void *sdram;
+  unsigned short* sdram;
+  int  j, count;
+  unsigned long i;
+
+  int width = 512, height = 512;
+  int done = 0;
+  clock_t start, end;
+  unsigned char result[height][width];
+  unsigned char tmp;
+
+  if((fd = open( "/dev/mem", (O_RDWR | O_SYNC) ) ) == -1) {
+    printf("ERROR\n");
+    return(1);
+  }
+  VA = mmap(NULL, SDRAM_SPAN, ( PROT_READ | PROT_WRITE), MAP_SHARED, fd, SDRAM_BASE);
+
+
+  if(VA == MAP_FAILED) {
+    printf("VA ERROR\n");
+    close(fd);
+    return(1);
+  }
+
+ LW = mmap(NULL, HW_REGS_SPAN, ( PROT_READ | PROT_WRITE), MAP_SHARED, fd, HW_REGS_BASE);
+  if(LW == MAP_FAILED) {
+    printf("LW ERROR\n");
+    close(fd);
+    return(1);
+  }
+
+
+
+  done_light = LW + ((unsigned long)(ALT_LWFPGASLVS_OFST + 0xB0) & (unsigned long)(HW_REGS_MASK));
+ 
+  ready_button= LW + ((unsigned long)(ALT_LWFPGASLVS_OFST + 0xD0) & (unsigned long)(HW_REGS_MASK));
+	
+  cont_button = LW + ((unsigned long)(ALT_LWFPGASLVS_OFST + 0xC0) & (unsigned long)(HW_REGS_MASK));
+
+  state = LW + ((unsigned long)(ALT_LWFPGASLVS_OFST + 0xA0) & (unsigned long)(HW_REGS_MASK));
+ 
+  sdram = VA + ((unsigned long)(SDRAM_OFST +0x0) &(unsigned long)(SDRAM_MASK));
+
+
+   unsigned char picture[512][512];
+   
+   printf("Loading Image.\n");
+   for(i = 0; i < height; i++){
+     // read in picture 1 row at a time
+     fread(picture[i],sizeof(unsigned char),width,input);
+	//printf("%d",picture[i][0]);
+	//getchar();
+   }
+  
+  
+
+
+   
+  printf("Loading to SDRAM.\n");
+  unsigned long offset = 0x00000;
+while((offset += 1) < 0x80000)
+      *((sdram + offset)) = (unsigned short)222 ;
+/*
+for(j = 0; j < 512; j+=2)
+    for(i = 0; i < 3; i++){
+      *((sdram + offset)) = (unsigned short)222 ;
+	offset += 1;
+ }
+
+  for(i = 3; i < 512; i++)
+    for(j = 0; j < 512; j+=2){
+      *((sdram + offset)) = (unsigned short)222;
+	offset += 1;
+}
+offset = 0x00000;
+for(j = 0; j < 512; j+=2)
+    for(i = 0; i < 3; i++){
+      if(*((sdram + offset)) != (unsigned short)222)
+	printf("wrong");
+	offset += 1;
+ }
+
+  for(i = 3; i < 512; i++)
+    for(j = 0; j < 512; j+=2){
+      if(*((sdram + offset)) != (unsigned short)222)
+	printf("wrong");
+	offset += 1;
+}
+*/
+
+
+
+offset =0;
+ for(j = 0; j < 512; j+=2)
+    for(i = 0; i < 3; i++){
+      *(sdram + offset) = ((picture[i][j]) *256 + (picture[i][j+1])) ;
+       //printf("%d ",*(sdram + offset));
+       //printf("%d ",picture[i][j]);
+      // printf("%d ",picture[i][j+1]);
+	//getchar();
+	offset+=1;
+ }
+
+  for(i = 3; i < 512; i++)
+    for(j = 0; j < 512; j+=2){
+      *(sdram + offset) = (picture[i][j])*256 + (picture[i][j+1]);
+	offset += 1;
+}
+
+printf("offset = %d\n",offset);
+getchar();
+
+/*
+ offset = 0;
+ for(j = 0; j < 512; j+=2)
+    for(i = 0; i < 3; i++){
+      printf("%d ",picture[i][j]);
+      if(*((unsigned short*)(sdram + offset)) != (unsigned short)(picture[i][j]) << 8 + (unsigned short)(picture[i][j+1])){
+        printf("i = %d, j = %d, ",i ,j);
+        getchar();
+       }
+    offset+=1;
+}
+getchar();
+
+  for(i = 3; i < 512; i++)
+    for(j = 0; j < 512; j+=2){
+	//printf("%d ",picture[i][j]);
+      if(*((unsigned short*)(sdram + offset)) != (unsigned short)(picture[i][j]) << 8 + (unsigned short)(picture[i][j+1])){
+        printf("i = %d, j = %d, ",i ,j);
+        //getchar();
+       }
+     offset+=1;
+}
+getchar();
+
+*/
+
+/*
+unsigned char q;
+for(q = 0; q < 255; q++){
+  *((unsigned char*)(sdram + offset)) = q;
+  offset += 2;
+}
+
+offset = 0;
+for(q = 0; q < 255; q++){
+  if(*((unsigned char*)(sdram + offset)) != q)
+	printf("expected = %d, value = %d",q,*((unsigned char*)(sdram+offset)) );
+  offset += 2;
+}
+*/
+
+
+
+
+
+offset = 0;
+
+
+   start = clock();
+   *(int*)cont_button = 1;  // skip debug state
+   *(int*)ready_button = 1;
+   *(int*)done_light = 1;
+  
+   int cur_state = 0;
+
+   printf("Done Loading to SDRAM\n");
+
+
+   while(!done)
+   {
+	done = (*(int*)done_light);
+        *(int*)cont_button = 1;
+   } 
+    end = clock();
+   *(int*)ready_button = 0;
+   *(int*)cont_button = 0;
+/*
+ offset = 0;
+ for(j = 0; j < 512; j+=2)
+    for(i = 0; i < 3; i++){
+      printf("%d ",picture[i][j]);
+      if(*((unsigned short*)(sdram + offset)) != (unsigned short)(picture[i][j]) << 8 + (unsigned short)(picture[i][j+1])){
+        printf("i = %d, j = %d, ",i ,j);
+        getchar();
+       }
+    offset+=1;
+    }
+getchar();
+
+  for(i = 3; i < 512; i++)
+    for(j = 0; j < 512; j+=2){
+	//printf("%d ",picture[i][j]);
+      if(*((unsigned short*)(sdram + offset)) != (unsigned short)(picture[i][j]) << 8 + (unsigned short)(picture[i][j+1])){
+        printf("i = %d, j = %d, val = %d",i ,j,*((unsigned short*)(sdram + offset)) );
+        getchar();
+       }
+      else
+	printf("actual:%d expected:%d",*((unsigned short*)(sdram + offset)),(unsigned short)picture[i][j]);
+     offset+=1;
+}
+getchar();
+*/
+   double elapsed = ((double)(end-start))/CLOCKS_PER_SEC; 
+   printf("Elapsed time (without loading to mem):\n");
+   printf("seconds: %.4f\n",elapsed);
+   printf("cycles: %ld\n",(long int)(end-start));
+   printf("clock frequency: %ld\n",CLOCKS_PER_SEC);
+
+
+   /* for(i = 0; i < 1; i++){
+     if(*((int*)VA + 0x20000 + i) != 0)
+   //  	printf("%d ", *((int*)VA + 0x20000 + i));
+   }
+  */
+
+  count = 0;
+  char temp1;
+  int value;
+  int row, col;
+int zero = 0;
+unsigned char num;
+ 
+
+for(i = 0; i < width; i++)
+   	fwrite(&zero,1,1,output);
+
+
+i = 0x00000;
+offset = 0x20000;
+
+unsigned short nibble;
+for(row = 1; row < (height-1); row++){ 
+     fwrite(&zero,1,1,output); // first col al 0's
+     for(col = 1; col < width-1; col+=2){
+        nibble = *((unsigned short*)(sdram + i));
+	printf("%d %d \n",nibble /256, nibble % 256);	
+	//printf("%d \n",nibble);
+	//printf("%d ",*(sdram + offset));
+	//if(nibble) getchar();
+	num = nibble >> 8;
+        fwrite(&num,1,1,output);
+	num = nibble & 0xFF;	     
+	i+= 1;
+	offset += 1;
+        fwrite(&num,1,1,output);
+	//if(num == 222) {printf("%d",offset-0x20000);getchar();}
+       // only writing 255x255 short ints which means 510 columns by 255 rows
+       //printf("%d ", picture[row][col] ); 
+
+	
+     }
+     i+=1;
+     offset+=1;
+     fwrite(&zero,1,1,output); // last col all 0's
+}
+ for(i = 0; i < width; i++)
+   	fwrite(&zero,1,1,output);
+
+
+  munmap(LW, HW_REGS_SPAN);
+  munmap(sdram, SDRAM_SPAN);
+  fclose(input);
+  fclose(output);
+  return 0;
+
+
+}
+
